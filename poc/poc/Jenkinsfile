@@ -1,0 +1,77 @@
+@Library('jenkins-shared-library') _
+
+pipeline {
+  agent { label "linux" }
+  options {
+    timeout(time: 60, unit: 'MINUTES') 
+  }
+
+  environment {
+    SQ_BREAK_BUILD="false"                                          // Sets whether the sonarqube scan can break build on quality gate failures.
+    BUILD_TYPE='maven'                                              // Options: maven, gradle
+    AD_GROUP="azure_tnt_tss"
+  }
+
+  stages {
+
+    // Build Stage
+    stage("Build") { 
+      steps {
+        initEnv()
+        buildApp()
+        writeDockerfile()
+        dockerBuild()     
+      }
+    }
+    
+     // Scan Stage
+    stage("Scan") {
+      parallel {
+        stage("Trivy Scan of Container Image") {
+          steps {
+            trivyScan()
+          }
+        }
+
+        stage("Docker Scan by Nexus IQ") {
+          steps {
+            dockerScan()
+          }
+        }
+      }
+    }
+
+    
+    // Publish Stage
+    stage('Publish Container to Azure Container Registry (ACR)'){
+      steps {
+        dockerPush()
+      }
+    }
+
+    // Following deploy stages may need to be amended depending on branching strategy.
+    
+    
+	stage("Deploy to sandbox") {
+     when { branch 'demo-rrk' } // Only deploy to dev if development branch
+      steps {
+        helmDeploy(environment: 'tnt-001-nonprod', stage: 'sandbox', namespace: 'tss-sandbox')
+      }
+    }
+
+    stage("Deploy to Dev") {
+     when { branch 'development' } // Only deploy to dev if development branch
+      steps {
+        helmDeploy(environment: 'tnt-001-nonprod', stage: 'development')
+      }
+    }
+    
+  }
+
+
+  post {
+    always {
+      cleanWs()
+    }
+  }
+}
