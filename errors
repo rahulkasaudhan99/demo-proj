@@ -1,0 +1,50 @@
+@Override
+    public void handleCacheGetError(RuntimeException exception, Cache cache, Object key) {
+        handleTimeOutException(exception);
+        log.debug("Unable to get from cache :{} :{}", cache.getName(), exception.getMessage());
+    }
+      /**
+     * 
+     * @param exception
+     * @param cache
+     * @param value
+     * @param key
+     * 
+     */
+    @Override
+    public void handleCachePutError(RuntimeException exception, Cache cache, Object key, Object value) {
+        handleTimeOutException(exception);
+        log.debug("Unable to put into cache :{} :{}", cache.getName(), exception.getMessage());
+    }
+    /**
+     * 
+     * @param exception
+     * @param cache
+     * 
+     */
+    @Override
+    public void handleCacheEvictError(RuntimeException exception, Cache cache, Object key) {
+        handleTimeOutException(exception);
+        log.debug("Unable to evict from cache :{} :{}", cache.getName(), exception.getMessage());
+    }
+    /**
+     * 
+     * @param exception
+     * @param cache
+     */
+    @Override
+    public void handleCacheClearError(RuntimeException exception, Cache cache) {
+        handleTimeOutException(exception);
+        log.debug("Unable to clean cache :{} :{} " , cache.getName(),exception.getMessage());
+    }
+    /**
+     * We handle redis connection timeout exception , if the exception is handled then it is treated as a cache miss and
+     * gets the data from actual storage
+     * 
+     * @param exception
+     */
+    private void handleTimeOutException(RuntimeException exception) {
+        if (exception instanceof RedisCommandTimeoutException) {
+            return;
+        }
+    }   
